@@ -1,0 +1,8 @@
+# Demo dependencies.
+# The query engine + CLI use only the Python standard library (sqlite3 is built in).
+# The Streamlit web UI needs:
+streamlit>=1.30
+
+# Optional — only if you swap the keyword router for the Anthropic API classifier
+# described in query_engine.py route() and BUILD_SPEC.md Section 11:
+# anthropic>=0.40.0
