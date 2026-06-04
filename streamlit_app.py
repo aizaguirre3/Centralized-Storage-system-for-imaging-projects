@@ -5,16 +5,33 @@ Run:
     python seed.py                  # build the database first
     streamlit run streamlit_app.py  # opens at http://localhost:8501
 
-This is a THIN shell over query_engine.route(). It does not reimplement any
-query logic and opens no writable database connection — all data access goes
-through the read-only engine.
+This is a THIN shell over query_engine.route(): it reimplements no query logic,
+and every *query* goes through the read-only engine. The only write it can do is
+a one-time bootstrap build of the synthetic demo DB if it's missing — needed for
+cloud deploys where `seed.py` isn't run separately. See ensure_database().
 """
 
 import os
 import streamlit as st
 from query_engine import route
+import seed  # imported only for the one-time DB bootstrap (see ensure_database)
 
 DB = os.path.join(os.path.dirname(__file__), "gas_renovation.db")
+
+
+@st.cache_resource
+def ensure_database():
+    """Build the synthetic demo DB once if it's missing.
+
+    Streamlit Community Cloud only runs `streamlit run`, never `python seed.py`,
+    so on first launch the DB won't exist yet. This is the one-time build step
+    from BUILD_SPEC Section 8 — not a data path. All *queries* still go through
+    the read-only query_engine, and the DB stays a gitignored build artifact
+    (regenerated here, never committed). @st.cache_resource runs it once.
+    """
+    if not os.path.exists(DB):
+        seed.build()
+    return DB
 
 st.set_page_config(page_title="Renovation Project Assistant", page_icon="🏗️")
 
@@ -25,9 +42,7 @@ st.caption(
 )
 st.info("Read-only assistant: it retrieves and presents data, and can never change it.", icon="🔒")
 
-if not os.path.exists(DB):
-    st.error("Database not found. Run `python seed.py` first, then reload.")
-    st.stop()
+ensure_database()
 
 if "history" not in st.session_state:
     st.session_state.history = []
